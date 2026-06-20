@@ -256,6 +256,59 @@ button { cursor: pointer; font-family: inherit; }
 
 .host-main { display: flex; flex-direction: column; gap: 1rem; }
 
+/* Call phrase card */
+.call-card {
+    background: linear-gradient(135deg, rgba(26,0,80,.95), rgba(45,0,96,.95));
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    display: flex; flex-direction: column; gap: .55rem;
+    position: relative; overflow: hidden;
+}
+.call-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,.04), transparent);
+    pointer-events: none;
+}
+@keyframes call-slide-in {
+    0%   { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+.call-slide-in { animation: call-slide-in .35s ease forwards; }
+
+.call-line {
+    font-size: clamp(.82rem, 2.2vw, 1rem);
+    line-height: 1.45;
+    padding-left: 1.8rem;
+    position: relative;
+}
+.call-line::before {
+    content: '';
+    position: absolute; left: 0; top: .15em;
+    width: 1.2rem; height: 1.2rem;
+    border-radius: 3px;
+    background-size: contain; background-repeat: no-repeat;
+    font-size: .9rem;
+}
+.call-line.en {
+    color: #ffe680;
+    font-weight: 600;
+}
+.call-line.en::before { content: '🇬🇧'; }
+.call-line.hi {
+    color: #ffb347;
+    font-weight: 500;
+    font-size: clamp(.8rem, 2vw, .95rem);
+}
+.call-line.hi::before { content: '🇮🇳'; }
+.call-line.ne {
+    color: #7ec8ff;
+    font-weight: 500;
+    font-size: clamp(.8rem, 2vw, .95rem);
+}
+.call-line.ne::before { content: '🇳🇵'; }
+
 /* Current draw panel */
 .draw-panel {
     background: var(--card); border: 1px solid var(--border);

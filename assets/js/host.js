@@ -87,11 +87,35 @@ const HostMode = (() => {
 
     function announceNumber(num) {
         if (!window.speechSynthesis) return;
-        const utterance = new SpeechSynthesisUtterance(String(num));
-        utterance.rate = 0.85;
+        const call = (typeof NUMBER_CALLS !== 'undefined') ? NUMBER_CALLS[num] : null;
+        // Strip emoji from the English phrase for cleaner TTS
+        const phrase = call
+            ? call.en.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2702}-\u{27B0}]/gu, '').trim()
+            : '';
+        const text = phrase ? `Number ${num}. ${phrase}` : `Number ${num}`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.82;
         utterance.pitch = 1.1;
+        utterance.lang = 'en-IN';
         speechSynthesis.cancel();
         speechSynthesis.speak(utterance);
+    }
+
+    function updateCallDisplay(num) {
+        const card = document.getElementById('callCard');
+        if (!card) return;
+        if (num === null || typeof NUMBER_CALLS === 'undefined' || !NUMBER_CALLS[num]) {
+            card.classList.add('hidden');
+            return;
+        }
+        const call = NUMBER_CALLS[num];
+        document.getElementById('callEn').textContent = call.en;
+        document.getElementById('callHi').textContent = call.hi;
+        document.getElementById('callNe').textContent = call.ne;
+        card.classList.remove('hidden');
+        card.classList.remove('call-slide-in');
+        void card.offsetWidth;
+        card.classList.add('call-slide-in');
     }
 
     /* ---------- render ---------- */
@@ -133,9 +157,10 @@ const HostMode = (() => {
             empty.classList.add('hidden');
             el.textContent = num;
             el.classList.remove('pop-in');
-            void el.offsetWidth; // reflow
+            void el.offsetWidth;
             el.classList.add('pop-in');
         }
+        updateCallDisplay(num);
     }
 
     function updateStats() {
