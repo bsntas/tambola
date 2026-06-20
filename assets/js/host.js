@@ -7,6 +7,7 @@ const HostMode = (() => {
     let remaining = [];
     let autoTimer = null;
     let autoSpeed = 8000;
+    let voiceLang = 'en';
     let isAutoRunning = false;
     let lastDrawn = null;
     let verifyTicket = null;
@@ -15,7 +16,7 @@ const HostMode = (() => {
 
     function save() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ drawn, autoSpeed }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ drawn, autoSpeed, voiceLang }));
         } catch {}
     }
 
@@ -24,6 +25,7 @@ const HostMode = (() => {
             const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
             drawn = d.drawn || [];
             autoSpeed = d.autoSpeed || 8000;
+            voiceLang = d.voiceLang || 'en';
         } catch {}
         const drawnSet = new Set(drawn);
         remaining = TambolaGame.shuffle(
@@ -88,15 +90,32 @@ const HostMode = (() => {
     function announceNumber(num) {
         if (!window.speechSynthesis) return;
         const call = (typeof NUMBER_CALLS !== 'undefined') ? NUMBER_CALLS[num] : null;
-        // Strip emoji from the English phrase for cleaner TTS
-        const phrase = call
-            ? call.en.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2702}-\u{27B0}]/gu, '').trim()
-            : '';
-        const text = phrase ? `Number ${num}. ${phrase}` : `Number ${num}`;
+        const emojiRE = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2702}-\u{27B0}️]/gu;
+
+        let text, lang;
+        if (call) {
+            if (voiceLang === 'hi') {
+                const phrase = call.hi.replace(emojiRE, '').trim();
+                text = `${num}. ${phrase}`;
+                lang = 'hi-IN';
+            } else if (voiceLang === 'ne') {
+                const phrase = call.ne.replace(emojiRE, '').trim();
+                text = `${num}. ${phrase}`;
+                lang = 'ne-NP';
+            } else {
+                const phrase = call.en.replace(emojiRE, '').trim();
+                text = `Number ${num}. ${phrase}`;
+                lang = 'en-IN';
+            }
+        } else {
+            text = voiceLang === 'en' ? `Number ${num}` : `${num}`;
+            lang = voiceLang === 'hi' ? 'hi-IN' : voiceLang === 'ne' ? 'ne-NP' : 'en-IN';
+        }
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.82;
         utterance.pitch = 1.1;
-        utterance.lang = 'en-IN';
+        utterance.lang = lang;
         speechSynthesis.cancel();
         speechSynthesis.speak(utterance);
     }
@@ -306,6 +325,14 @@ const HostMode = (() => {
             autoSpeed = Number(speedSel.value);
             save();
             if (isAutoRunning) { stopAuto(); startAuto(); }
+        });
+
+        /* voice language selector */
+        const voiceSel = document.getElementById('voiceLangSelect');
+        voiceSel.value = voiceLang;
+        voiceSel.addEventListener('change', () => {
+            voiceLang = voiceSel.value;
+            save();
         });
 
         document.getElementById('btnDraw').addEventListener('click', drawNumber);
