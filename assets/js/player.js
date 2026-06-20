@@ -1,18 +1,17 @@
 'use strict';
 
 const PlayerMode = (() => {
-    const STORAGE_KEY = 'tambola_player';
+    const STORAGE_KEY = 'tambola_player_v2'; // v2 for 5-house book format
 
-    let tickets = [];     // array of 3×9 grids
-    let marked = [];      // array of Set
+    let books  = [];   // array of books; each book = array of 5 houses (3×9 grids)
+    let marked = [];   // array of Set — one per book (numbers are unique across houses)
     let activeIdx = 0;
 
-    /* ---------- persistence ---------- */
-
+    /* ── persistence ── */
     function save() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                tickets,
+                books,
                 marked: marked.map(s => [...s]),
             }));
         } catch {}
@@ -21,217 +20,239 @@ const PlayerMode = (() => {
     function load() {
         try {
             const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if (Array.isArray(d.tickets) && d.tickets.length) {
-                tickets = d.tickets;
+            if (Array.isArray(d.books) && d.books.length) {
+                books  = d.books;
                 marked = d.marked.map(m => new Set(m));
                 return;
             }
         } catch {}
-        tickets = [];
+        books  = [];
         marked = [];
     }
 
-    /* ---------- ticket management ---------- */
-
-    function addTicket(prebuilt) {
-        const t = prebuilt || TambolaGame.generateTicket();
-        tickets.push(t);
+    /* ── book management ── */
+    function addBook(prebuilt) {
+        const book = prebuilt || TambolaGame.generateBookTicket();
+        books.push(book);
         marked.push(new Set());
-        activeIdx = tickets.length - 1;
+        activeIdx = books.length - 1;
         save();
         renderTabs();
-        renderTicket(activeIdx);
-        renderWinBadges(activeIdx);
+        renderBook(activeIdx);
         updateTicketCount();
     }
 
-    function removeTicket(idx) {
-        if (tickets.length <= 1) {
-            showToast('You need at least one ticket.', 'warn');
-            return;
-        }
+    function removeBook(idx) {
+        if (books.length <= 1) { showToast('Need at least one ticket.', 'warn'); return; }
         if (!confirm('Remove this ticket?')) return;
-        tickets.splice(idx, 1);
+        books.splice(idx, 1);
         marked.splice(idx, 1);
-        activeIdx = Math.min(activeIdx, tickets.length - 1);
+        activeIdx = Math.min(activeIdx, books.length - 1);
         save();
         renderTabs();
-        renderTicket(activeIdx);
-        renderWinBadges(activeIdx);
+        renderBook(activeIdx);
         updateTicketCount();
     }
 
     function switchTab(idx) {
         activeIdx = idx;
         renderTabs();
-        renderTicket(activeIdx);
-        renderWinBadges(activeIdx);
+        renderBook(activeIdx);
     }
 
-    function toggleMark(ticketIdx, num) {
-        const s = marked[ticketIdx];
-        if (s.has(num)) s.delete(num);
-        else s.add(num);
+    function toggleMark(bookIdx, num) {
+        const s = marked[bookIdx];
+        s.has(num) ? s.delete(num) : s.add(num);
         save();
-        renderTicket(ticketIdx);
-        renderWinBadges(ticketIdx);
+        renderBook(bookIdx);
     }
 
-    /* ---------- render tabs ---------- */
-
+    /* ── tabs ── */
     function renderTabs() {
         const bar = document.getElementById('tabBar');
         bar.innerHTML = '';
-        tickets.forEach((t, i) => {
+        books.forEach((_, i) => {
             const btn = document.createElement('button');
             btn.className = 'tab-btn' + (i === activeIdx ? ' active' : '');
             btn.textContent = `#${i + 1}`;
             btn.addEventListener('click', () => switchTab(i));
             bar.appendChild(btn);
         });
-        const addBtn = document.createElement('button');
-        addBtn.className = 'tab-btn add-tab';
-        addBtn.title = 'Add new ticket';
-        addBtn.innerHTML = '＋';
-        addBtn.addEventListener('click', () => {
-            if (tickets.length >= 6) { showToast('Maximum 6 tickets per session.', 'warn'); return; }
-            addTicket();
+        const add = document.createElement('button');
+        add.className = 'tab-btn add-tab';
+        add.title = 'Add new ticket';
+        add.textContent = '＋';
+        add.addEventListener('click', () => {
+            if (books.length >= 6) { showToast('Maximum 6 tickets.', 'warn'); return; }
+            addBook();
         });
-        bar.appendChild(addBtn);
+        bar.appendChild(add);
     }
 
-    /* ---------- render ticket ---------- */
-
-    function renderTicket(idx) {
-        const ticket = tickets[idx];
+    /* ── book render ── */
+    function renderBook(idx) {
+        const book      = books[idx];
         const markedSet = marked[idx];
-        const status = TambolaGame.winStatus(ticket, [...markedSet]);
-        const winRows = {
-            0: status.top_row,
-            1: status.middle_row,
-            2: status.bottom_row,
-        };
+        const status    = TambolaGame.bookWinStatus(book, [...markedSet]);
 
         const container = document.getElementById('ticketContainer');
         container.innerHTML = '';
 
-        const card = document.createElement('div');
-        card.className = 'ticket-card' + (status.full_house ? ' full-house-glow' : '');
+        const wrap = document.createElement('div');
+        wrap.className = 'book-wrap';
 
-        // Header
-        const hdr = document.createElement('div');
-        hdr.className = 'ticket-header';
-        hdr.innerHTML = `
-            <span class="ticket-title">TAMBOLA</span>
-            <span class="ticket-id">Ticket #${idx + 1} &nbsp;|&nbsp; ID: ${TambolaGame.ticketId(ticket)}</span>
+        // book header
+        const bHdr = document.createElement('div');
+        bHdr.className = 'book-header';
+        const markedCount = [...markedSet].filter(n =>
+            book.some(h => TambolaGame.houseNums(h).includes(n))
+        ).length;
+        bHdr.innerHTML = `
+          <span class="book-title">TAMBOLA</span>
+          <span class="book-meta">Ticket #${idx+1} &nbsp;·&nbsp; ID: ${TambolaGame.bookId(book)}</span>
+          <span class="book-marked">${markedCount} / 90 marked</span>
         `;
-        card.appendChild(hdr);
 
-        // Grid
-        const grid = document.createElement('div');
-        grid.className = 'ticket-grid';
+        // early five badge (whole ticket)
+        const ef = document.createElement('div');
+        ef.className = 'early-five-strip';
+        const efBadge = document.createElement('span');
+        efBadge.className = 'ef-badge' + (status.early_five ? ' won' : '');
+        efBadge.textContent = '✋ Early Five';
+        efBadge.title = 'Any 5 numbers from the entire ticket';
+        if (status.early_five) efBadge.addEventListener('click', () => openClaimModal(idx, null, 'early_five'));
+        ef.appendChild(efBadge);
 
-        for (let r = 0; r < 3; r++) {
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'ticket-row' + (winRows[r] ? ' row-win' : '');
+        wrap.appendChild(bHdr);
+        wrap.appendChild(ef);
 
-            for (let c = 0; c < 9; c++) {
-                const n = ticket[r][c];
-                const cell = document.createElement('div');
+        // 5 houses
+        const HOUSE_COLORS = ['#c0392b','#2980b9','#27ae60','#8e44ad','#d35400'];
 
-                if (n === 0) {
-                    cell.className = 'tcell blank';
-                } else {
-                    const isMarked = markedSet.has(n);
-                    cell.className = 'tcell number' + (isMarked ? ' marked' : '');
-                    cell.textContent = n;
-                    cell.setAttribute('role', 'button');
-                    cell.setAttribute('tabindex', '0');
-                    cell.setAttribute('aria-label', `Number ${n}${isMarked ? ', marked' : ''}`);
-                    cell.addEventListener('click', () => toggleMark(idx, n));
-                    cell.addEventListener('keydown', e => {
-                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMark(idx, n); }
-                    });
+        book.forEach((house, hIdx) => {
+            const hs = status.houses[hIdx];
+            const hDiv = document.createElement('div');
+            hDiv.className = 'house-block';
+
+            // house header
+            const hHdr = document.createElement('div');
+            hHdr.className = 'house-header';
+            hHdr.style.background = HOUSE_COLORS[hIdx];
+
+            const hLabel = document.createElement('span');
+            hLabel.className = 'house-label';
+            hLabel.textContent = `House ${hIdx + 1}`;
+
+            const hBadges = document.createElement('div');
+            hBadges.className = 'house-badges';
+            TambolaGame.HOUSE_CLAIM_TYPES.forEach(ct => {
+                const b = document.createElement('button');
+                b.className = 'hbadge' + (hs[ct.id] ? ' won' : '');
+                b.title = ct.label;
+                b.textContent = ct.icon;
+                if (hs[ct.id]) b.addEventListener('click', () => openClaimModal(idx, hIdx, ct.id));
+                hBadges.appendChild(b);
+            });
+
+            hHdr.appendChild(hLabel);
+            hHdr.appendChild(hBadges);
+            hDiv.appendChild(hHdr);
+
+            // grid
+            const grid = document.createElement('div');
+            grid.className = 'house-grid';
+
+            const ROW_LABELS = ['T','M','B'];
+            const ROW_WINS   = ['top_row','middle_row','bottom_row'];
+
+            for (let r = 0; r < TambolaGame.ROWS; r++) {
+                const rowWon = hs[ROW_WINS[r]];
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'house-row' + (rowWon ? ' row-win' : '');
+
+                for (let c = 0; c < TambolaGame.COLS; c++) {
+                    const n = house[r][c];
+                    const cell = document.createElement('div');
+                    if (n === 0) {
+                        cell.className = 'hcell blank';
+                    } else {
+                        const isMark = markedSet.has(n);
+                        cell.className = 'hcell num' + (isMark ? ' marked' : '');
+                        cell.textContent = n;
+                        cell.setAttribute('role', 'button');
+                        cell.setAttribute('tabindex', '0');
+                        cell.setAttribute('aria-label', `${n}${isMark ? ', marked' : ''}`);
+                        cell.addEventListener('click', () => toggleMark(idx, n));
+                        cell.addEventListener('keydown', e => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMark(idx, n); }
+                        });
+                    }
+                    rowDiv.appendChild(cell);
                 }
-                rowDiv.appendChild(cell);
+                grid.appendChild(rowDiv);
             }
-            grid.appendChild(rowDiv);
-        }
-        card.appendChild(grid);
 
-        // Footer
-        const footer = document.createElement('div');
-        footer.className = 'ticket-footer';
-        const markedCount = [...markedSet].filter(n => TambolaGame.getAllNums(ticket).includes(n)).length;
-        footer.innerHTML = `<span>${markedCount} / ${TambolaGame.getAllNums(ticket).length} marked</span>`;
-        card.appendChild(footer);
+            hDiv.appendChild(grid);
+            wrap.appendChild(hDiv);
+        });
 
-        container.appendChild(card);
+        container.appendChild(wrap);
     }
 
-    /* ---------- win badges ---------- */
+    /* ── claim modal ── */
+    function openClaimModal(bookIdx, houseIdx, claimId) {
+        const book = books[bookIdx];
+        const code = TambolaGame.encodeBook(book);
+        const ct   = houseIdx === null
+            ? TambolaGame.TICKET_CLAIM_TYPES.find(c => c.id === claimId)
+            : TambolaGame.HOUSE_CLAIM_TYPES.find(c => c.id === claimId);
+        const markedSet = marked[bookIdx];
 
-    function renderWinBadges(idx) {
-        const ticket = tickets[idx];
-        const markedSet = marked[idx];
-        const status = TambolaGame.winStatus(ticket, [...markedSet]);
-        const panel = document.getElementById('winPanel');
-        panel.innerHTML = '';
-
-        for (const ct of TambolaGame.CLAIM_TYPES) {
-            const badge = document.createElement('div');
-            const won = status[ct.id];
-            badge.className = 'win-badge' + (won ? ' won' : '');
-            badge.innerHTML = `<span class="badge-icon">${ct.icon}</span><span class="badge-label">${ct.label}</span>`;
-            badge.title = ct.desc;
-
-            if (won) {
-                badge.addEventListener('click', () => openClaimModal(idx, ct.id));
-            }
-            panel.appendChild(badge);
-        }
-    }
-
-    /* ---------- claim modal ---------- */
-
-    function openClaimModal(ticketIdx, claimId) {
-        const ticket = tickets[ticketIdx];
-        const code = TambolaGame.encodeTicket(ticket);
-        const ct = TambolaGame.CLAIM_TYPES.find(c => c.id === claimId);
-        const markedSet = marked[ticketIdx];
-
-        const modal = document.getElementById('claimModal');
-        document.getElementById('claimWinType').textContent = `${ct.icon} ${ct.label}`;
+        document.getElementById('claimWinType').textContent =
+            `${ct.icon} ${ct.label}` + (houseIdx !== null ? ` — House ${houseIdx + 1}` : ' (Whole Ticket)');
+        document.getElementById('claimTicketId').textContent = TambolaGame.bookId(book);
         document.getElementById('claimTicketCode').textContent = code;
-        document.getElementById('claimTicketId').textContent = TambolaGame.ticketId(ticket);
 
-        const drawnSet = new Set([...markedSet]);
+        // mini preview: show only the relevant house (or all for early five)
         const miniEl = document.getElementById('claimTicketMini');
-        let html = '<div class="ticket-mini">';
-        for (let r = 0; r < 3; r++) {
-            html += '<div class="ticket-row">';
-            for (let c = 0; c < 9; c++) {
-                const n = ticket[r][c];
-                const cls = n === 0 ? 'blank' : drawnSet.has(n) ? 'hit' : 'miss';
-                html += `<div class="tcell ${cls}">${n === 0 ? '' : n}</div>`;
-            }
-            html += '</div>';
-        }
-        html += '</div>';
-        miniEl.innerHTML = html;
+        miniEl.innerHTML = '';
 
-        modal.classList.remove('hidden');
+        const housesToShow = houseIdx !== null ? [houseIdx] : book.map((_, i) => i);
+        const ds = markedSet;
+
+        housesToShow.forEach(hi => {
+            const hDiv = document.createElement('div');
+            hDiv.className = 'claim-house-mini';
+            hDiv.innerHTML = `<div class="claim-house-label">House ${hi+1}</div>`;
+            const mini = document.createElement('div');
+            mini.className = 'ticket-mini';
+            for (let r = 0; r < TambolaGame.ROWS; r++) {
+                const row = document.createElement('div');
+                row.className = 'ticket-row';
+                for (let c = 0; c < TambolaGame.COLS; c++) {
+                    const n = book[hi][r][c];
+                    const cell = document.createElement('div');
+                    cell.className = 'tcell ' + (n === 0 ? 'blank' : ds.has(n) ? 'hit' : 'miss');
+                    cell.textContent = n || '';
+                    row.appendChild(cell);
+                }
+                mini.appendChild(row);
+            }
+            hDiv.appendChild(mini);
+            miniEl.appendChild(hDiv);
+        });
+
+        document.getElementById('claimModal').classList.remove('hidden');
     }
 
     function closeClaimModal() {
         document.getElementById('claimModal').classList.add('hidden');
     }
 
-    /* ---------- share / print ---------- */
-
-    function shareTicket() {
-        const code = TambolaGame.encodeTicket(tickets[activeIdx]);
-        const url = `${location.origin}${location.pathname}#ticket=${encodeURIComponent(code)}`;
+    /* ── sharing ── */
+    function shareBook() {
+        const code = TambolaGame.encodeBook(books[activeIdx]);
+        const url  = `${location.origin}${location.pathname}#ticket=${encodeURIComponent(code)}`;
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(() => showToast('Share link copied!', 'success'));
         } else {
@@ -240,7 +261,7 @@ const PlayerMode = (() => {
     }
 
     function copyCode() {
-        const code = TambolaGame.encodeTicket(tickets[activeIdx]);
+        const code = TambolaGame.encodeBook(books[activeIdx]);
         if (navigator.clipboard) {
             navigator.clipboard.writeText(code).then(() => showToast('Ticket code copied!', 'success'));
         } else {
@@ -248,74 +269,66 @@ const PlayerMode = (() => {
         }
     }
 
-    function printTicket() {
-        window.print();
-    }
-
-    function resetMarks() {
-        if (!confirm('Clear all marks on this ticket?')) return;
-        marked[activeIdx].clear();
-        save();
-        renderTicket(activeIdx);
-        renderWinBadges(activeIdx);
-    }
-
-    /* ---------- import from URL hash ---------- */
-
     function checkUrlTicket() {
-        const hash = location.hash;
-        const match = hash.match(/[#&]ticket=([^&]+)/);
-        if (!match) return;
-        const code = decodeURIComponent(match[1]);
-        const ticket = TambolaGame.decodeTicket(code);
-        if (!ticket) { showToast('Invalid ticket in URL.', 'warn'); return; }
-        // Check if this ticket is already saved
-        const existing = tickets.find(t => TambolaGame.encodeTicket(t) === code);
-        if (!existing) {
-            addTicket(ticket);
-            showToast('Ticket loaded from link!', 'success');
-        }
+        const m = location.hash.match(/[#&]ticket=([^&]+)/);
+        if (!m) return;
+        const code = decodeURIComponent(m[1]);
+        const book = TambolaGame.decodeBook(code);
+        if (!book) { showToast('Invalid ticket in URL.', 'warn'); return; }
+        const existing = books.find(b => TambolaGame.encodeBook(b) === code);
+        if (!existing) { addBook(book); showToast('Ticket loaded from link!', 'success'); }
         history.replaceState(null, '', location.pathname);
     }
 
     function updateTicketCount() {
         const el = document.getElementById('ticketCount');
-        if (el) el.textContent = tickets.length;
+        if (el) el.textContent = books.length;
     }
 
-    /* ---------- toast ---------- */
-
+    /* ── toast ── */
     function showToast(msg, type = 'info') {
         const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className = `toast show ${type}`;
+        t.textContent  = msg;
+        t.className    = `toast show ${type}`;
         clearTimeout(t._timer);
         t._timer = setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    /* ---------- init ---------- */
-
+    /* ── init ── */
     function init() {
         load();
-        if (tickets.length === 0) addTicket();
+        if (books.length === 0) addBook();
         checkUrlTicket();
         renderTabs();
-        renderTicket(activeIdx);
-        renderWinBadges(activeIdx);
+        renderBook(activeIdx);
         updateTicketCount();
 
         document.getElementById('btnNewTicket').addEventListener('click', () => {
-            if (tickets.length >= 6) { showToast('Maximum 6 tickets.', 'warn'); return; }
-            addTicket();
+            if (books.length >= 6) { showToast('Maximum 6 tickets.', 'warn'); return; }
+            addBook();
         });
-        document.getElementById('btnRemoveTicket').addEventListener('click', () => removeTicket(activeIdx));
-        document.getElementById('btnResetMarks').addEventListener('click', resetMarks);
-        document.getElementById('btnShareTicket').addEventListener('click', shareTicket);
+        document.getElementById('btnRemoveTicket').addEventListener('click', () => removeBook(activeIdx));
+        document.getElementById('btnResetMarks').addEventListener('click', () => {
+            if (!confirm('Clear all marks on this ticket?')) return;
+            marked[activeIdx].clear();
+            save();
+            renderBook(activeIdx);
+        });
+        document.getElementById('btnShareTicket').addEventListener('click', shareBook);
         document.getElementById('btnCopyCode').addEventListener('click', copyCode);
-        document.getElementById('btnPrint').addEventListener('click', printTicket);
+        document.getElementById('btnPrint').addEventListener('click', () => window.print());
         document.getElementById('btnCloseClaim').addEventListener('click', closeClaimModal);
         document.getElementById('claimModal').addEventListener('click', e => {
             if (e.target === document.getElementById('claimModal')) closeClaimModal();
+        });
+        document.getElementById('btnCopyClaimCode').addEventListener('click', () => {
+            const code = document.getElementById('claimTicketCode').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code)
+                    .then(() => showToast('Code copied!', 'success'));
+            } else {
+                prompt('Copy your ticket code:', code);
+            }
         });
     }
 

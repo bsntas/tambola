@@ -120,7 +120,12 @@
     <div class="modal-box">
         <div class="modal-title" id="verifyTitle">✅ Verify Winning Claim</div>
 
-        <label style="font-size:.82rem;color:var(--muted);display:block;margin-bottom:.3rem">Prize type being claimed</label>
+        <div id="houseSelectRow" class="hidden">
+            <label style="font-size:.82rem;color:var(--muted);display:block;margin-bottom:.3rem">Which house / prize scope?</label>
+            <select id="houseSelect" class="claim-select" aria-label="House selector"></select>
+        </div>
+
+        <label style="font-size:.82rem;color:var(--muted);display:block;margin:.6rem 0 .3rem">Prize type being claimed</label>
         <select id="claimTypeSelect" class="claim-select" aria-label="Prize type"></select>
 
         <label style="font-size:.82rem;color:var(--muted);display:block;margin:.9rem 0 .3rem">Player's ticket code</label>

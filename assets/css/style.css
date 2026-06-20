@@ -464,12 +464,116 @@ button { cursor: pointer; font-family: inherit; }
 }
 .code-label { font-size: .75rem; color: var(--muted); margin-bottom: .35rem; }
 
+/* ===== Book / 5-House Ticket Layout (Player Page) ===== */
+
+.book-wrap {
+    display: flex; flex-direction: column; gap: .75rem;
+}
+
+.book-header {
+    background: linear-gradient(135deg, rgba(26,0,80,.9), rgba(45,0,96,.9));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: .65rem 1rem;
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+}
+.book-title {
+    font-size: 1rem; font-weight: 900; letter-spacing: .14em;
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.book-meta  { font-size: .75rem; color: var(--muted); font-family: monospace; }
+.book-marked { margin-left: auto; font-size: .75rem; color: var(--muted); }
+
+.early-five-strip {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .35rem .5rem;
+}
+.ef-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .35rem .9rem; border-radius: 99px;
+    border: 1.5px solid var(--border);
+    font-size: .82rem; font-weight: 600; color: var(--muted);
+    background: var(--card); transition: all .2s;
+}
+.ef-badge.won {
+    border-color: var(--gold); color: var(--gold);
+    background: rgba(255,215,0,.12);
+    cursor: pointer; animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+/* Individual house block */
+.house-block {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+}
+
+.house-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .45rem .75rem; gap: .5rem;
+}
+.house-label {
+    font-size: .78rem; font-weight: 700; color: #fff;
+    letter-spacing: .06em; text-transform: uppercase;
+}
+.house-badges { display: flex; gap: .3rem; }
+.hbadge {
+    background: rgba(0 0 0 / .25); border: 1px solid rgba(255 255 255 / .25);
+    color: rgba(255 255 255 / .6);
+    border-radius: 6px; padding: .2rem .35rem;
+    font-size: .82rem; line-height: 1; cursor: default;
+    transition: all .15s;
+}
+.hbadge.won {
+    background: rgba(255,215,0,.22); border-color: var(--gold);
+    color: var(--gold); cursor: pointer;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+/* House grid */
+.house-grid { display: flex; flex-direction: column; }
+.house-row  {
+    display: grid; grid-template-columns: repeat(9, 1fr);
+    border-top: 1px solid rgba(255 255 255 / .07);
+}
+.house-row.row-win { background: rgba(255,215,0,.07); }
+
+.hcell {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(.7rem, 1.8vw, .9rem); font-weight: 700;
+    border-right: 1px solid rgba(255 255 255 / .07);
+    transition: background .15s, color .15s;
+}
+.hcell:last-child { border-right: none; }
+.hcell.blank { background: rgba(255 255 255 / .03); color: transparent; }
+.hcell.num   { color: var(--white); cursor: pointer; }
+.hcell.num:hover { background: rgba(255,215,0,.14); }
+.hcell.num.marked {
+    background: rgba(39,174,96,.3); color: #7effa7;
+    text-decoration: line-through;
+}
+.house-row.row-win .hcell.marked {
+    background: rgba(255,215,0,.25); color: var(--gold);
+}
+
+/* Claim modal house mini */
+.claim-house-mini { margin-bottom: .65rem; }
+.claim-house-label {
+    font-size: .72rem; color: var(--muted); letter-spacing: .05em;
+    text-transform: uppercase; margin-bottom: .3rem;
+}
+
 /* ===== Print styles ===== */
 @media print {
     body { background: #fff; color: #000; }
-    .page-header, .tab-bar, .ticket-actions, .win-panel, .toast, .modal { display: none !important; }
+    .page-header, .tab-bar, .ticket-actions, .win-panel, .toast, .modal,
+    .house-badges, .early-five-strip { display: none !important; }
     .player-layout { padding: 0; }
-    .ticket-card { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
-    .ticket-header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    .tcell.marked { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .book-wrap { gap: .4rem; }
+    .book-header { background: #333; color: #fff; }
+    .house-block { border: 1px solid #999; break-inside: avoid; }
+    .house-header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .hcell { color: #000; border-color: #ccc; }
+    .hcell.blank { background: #f0f0f0; }
+    .hcell.marked { background: #27ae60 !important; color: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

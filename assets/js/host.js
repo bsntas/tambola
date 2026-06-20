@@ -177,6 +177,8 @@ const HostMode = (() => {
         document.getElementById('ticketCodeInput').value = '';
         document.getElementById('verifyResult').innerHTML = '';
         document.getElementById('ticketPreview').innerHTML = '';
+        document.getElementById('houseSelectRow').classList.add('hidden');
+        document.getElementById('claimTypeSelect').innerHTML = '';
         document.getElementById('verifyModal').classList.remove('hidden');
     }
 
@@ -187,30 +189,66 @@ const HostMode = (() => {
     function decodeVerifyTicket() {
         const code = document.getElementById('ticketCodeInput').value.trim();
         if (!code) return;
-        const ticket = TambolaGame.decodeTicket(code);
-        if (!ticket) {
+        const book = TambolaGame.decodeBook(code);
+        if (!book) {
             document.getElementById('ticketPreview').innerHTML =
                 '<p class="error-text">Invalid ticket code. Please check and try again.</p>';
             verifyTicket = null;
             return;
         }
-        verifyTicket = ticket;
-        renderVerifyPreview(ticket);
+        verifyTicket = book;
+        renderVerifyPreview(book);
+        populateHouseSelect(book);
     }
 
-    function renderVerifyPreview(ticket) {
+    function populateHouseSelect(book) {
+        const hSel = document.getElementById('houseSelect');
+        hSel.innerHTML = '';
+        // Early Five option (whole ticket)
+        const allOpt = document.createElement('option');
+        allOpt.value = 'all';
+        allOpt.textContent = '✋ Early Five (whole ticket)';
+        hSel.appendChild(allOpt);
+        book.forEach((_, i) => {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = `House ${i + 1}`;
+            hSel.appendChild(opt);
+        });
+        document.getElementById('houseSelectRow').classList.remove('hidden');
+        updateClaimTypeSelect();
+    }
+
+    function updateClaimTypeSelect() {
+        const hSel  = document.getElementById('houseSelect');
+        const cSel  = document.getElementById('claimTypeSelect');
+        const isAll = hSel.value === 'all';
+        cSel.innerHTML = '';
+        const types = isAll ? TambolaGame.TICKET_CLAIM_TYPES : TambolaGame.HOUSE_CLAIM_TYPES;
+        types.forEach(ct => {
+            const opt = document.createElement('option');
+            opt.value = ct.id;
+            opt.textContent = `${ct.icon} ${ct.label}`;
+            cSel.appendChild(opt);
+        });
+    }
+
+    function renderVerifyPreview(book) {
         const drawnSet = new Set(drawn);
-        let html = '<div class="ticket-mini">';
-        for (let r = 0; r < 3; r++) {
-            html += '<div class="ticket-row">';
-            for (let c = 0; c < 9; c++) {
-                const n = ticket[r][c];
-                const cls = n === 0 ? 'blank' : drawnSet.has(n) ? 'hit' : 'miss';
-                html += `<div class="tcell ${cls}">${n === 0 ? '' : n}</div>`;
+        let html = '';
+        book.forEach((house, hi) => {
+            html += `<div class="claim-house-mini"><div class="claim-house-label">House ${hi + 1}</div><div class="ticket-mini">`;
+            for (let r = 0; r < TambolaGame.ROWS; r++) {
+                html += '<div class="ticket-row">';
+                for (let c = 0; c < TambolaGame.COLS; c++) {
+                    const n = house[r][c];
+                    const cls = n === 0 ? 'blank' : drawnSet.has(n) ? 'hit' : 'miss';
+                    html += `<div class="tcell ${cls}">${n || ''}</div>`;
+                }
+                html += '</div>';
             }
-            html += '</div>';
-        }
-        html += '</div>';
+            html += '</div></div>';
+        });
         document.getElementById('ticketPreview').innerHTML = html;
     }
 
@@ -219,10 +257,20 @@ const HostMode = (() => {
             showToast('Load a ticket code first.', 'warn');
             return;
         }
+        const hSel    = document.getElementById('houseSelect');
         const claimId = document.getElementById('claimTypeSelect').value;
-        const won = TambolaGame.checkWin(verifyTicket, drawn, claimId);
-        const claimLabel = TambolaGame.CLAIM_TYPES.find(c => c.id === claimId)?.label ?? claimId;
-        const resEl = document.getElementById('verifyResult');
+        const isAll   = hSel.value === 'all';
+        const resEl   = document.getElementById('verifyResult');
+
+        let won, claimLabel;
+        if (isAll) {
+            won = TambolaGame.checkEarlyFive(verifyTicket, drawn);
+            claimLabel = TambolaGame.TICKET_CLAIM_TYPES.find(c => c.id === claimId)?.label ?? claimId;
+        } else {
+            const hIdx = Number(hSel.value);
+            won = TambolaGame.checkHouseWin(verifyTicket[hIdx], drawn, claimId);
+            claimLabel = TambolaGame.HOUSE_CLAIM_TYPES.find(c => c.id === claimId)?.label ?? claimId;
+        }
 
         if (won) {
             resEl.innerHTML = `<div class="verify-win">✅ VALID CLAIM! <span>${claimLabel}</span> is complete.</div>`;
@@ -277,14 +325,7 @@ const HostMode = (() => {
             if (e.target === document.getElementById('verifyModal')) closeVerifyModal();
         });
 
-        /* populate claim type select */
-        const sel = document.getElementById('claimTypeSelect');
-        TambolaGame.CLAIM_TYPES.forEach(ct => {
-            const opt = document.createElement('option');
-            opt.value = ct.id;
-            opt.textContent = `${ct.icon} ${ct.label}`;
-            sel.appendChild(opt);
-        });
+        document.getElementById('houseSelect').addEventListener('change', updateClaimTypeSelect);
     }
 
     return { init };

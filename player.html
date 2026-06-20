@@ -36,12 +36,6 @@
     <!-- Ticket render area -->
     <div id="ticketContainer"></div>
 
-    <!-- Win badges -->
-    <div class="sidebar-card" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
-        <div class="sidebar-title" style="color:var(--gold);font-size:.78rem;letter-spacing:.08em;font-weight:700;margin-bottom:.75rem">WIN STATUS — tap a glowing badge to claim</div>
-        <div class="win-panel" id="winPanel"></div>
-    </div>
-
     <!-- Instructions -->
     <div class="sidebar-card" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
         <div class="sidebar-title" style="color:var(--gold);font-size:.78rem;letter-spacing:.08em;font-weight:700;margin-bottom:.6rem">HOW TO PLAY</div>
@@ -82,24 +76,5 @@
 
 <script src="assets/js/game.js"></script>
 <script src="assets/js/player.js"></script>
-<script>
-    /* Wire up copy-code inside claim modal after scripts load */
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('btnCopyClaimCode').addEventListener('click', () => {
-            const code = document.getElementById('claimTicketCode').textContent;
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(code).then(() => {
-                    const t = document.getElementById('toast');
-                    t.textContent = 'Ticket code copied!';
-                    t.className = 'toast show success';
-                    clearTimeout(t._timer);
-                    t._timer = setTimeout(() => t.classList.remove('show'), 3000);
-                });
-            } else {
-                prompt('Copy your ticket code:', code);
-            }
-        });
-    });
-</script>
 </body>
 </html>

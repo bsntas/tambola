@@ -2,18 +2,15 @@
 
 const TambolaGame = (() => {
     const COLUMN_RANGES = [
-        [1, 9], [10, 19], [20, 29], [30, 39], [40, 49],
-        [50, 59], [60, 69], [70, 79], [80, 90]
+        [1,9],[10,19],[20,29],[30,39],[40,49],[50,59],[60,69],[70,79],[80,90]
     ];
+    const COL_SIZES   = [9,10,10,10,10,10,10,10,11]; // numbers per column across all 90
+    const HOUSES      = 5;
+    const ROWS        = 3;  // rows per house
+    const COLS        = 9;
+    const NUMS_PER_ROW = 6; // 5 houses × 3 rows × 6 = 90
 
-    const CLAIM_TYPES = [
-        { id: 'top_row',    label: 'Top Row',    icon: '⬆️',  desc: 'All 5 numbers in the top row' },
-        { id: 'middle_row', label: 'Middle Row', icon: '➡️',  desc: 'All 5 numbers in the middle row' },
-        { id: 'bottom_row', label: 'Bottom Row', icon: '⬇️',  desc: 'All 5 numbers in the bottom row' },
-        { id: 'early_five', label: 'Early Five', icon: '✋',  desc: 'Any 5 numbers on the ticket' },
-        { id: 'full_house', label: 'Full House', icon: '🏠',  desc: 'All 15 numbers on the ticket' },
-    ];
-
+    /* ── shuffle ── */
     function shuffle(arr) {
         const a = [...arr];
         for (let i = a.length - 1; i > 0; i--) {
@@ -23,94 +20,169 @@ const TambolaGame = (() => {
         return a;
     }
 
-    function generateGrid() {
-        while (true) {
-            const row0 = shuffle([0,1,2,3,4,5,6,7,8]).slice(0, 5);
-            const row1 = shuffle([0,1,2,3,4,5,6,7,8]).slice(0, 5);
+    /* ── column-count matrix ──────────────────────────────────────────────
+       Returns a HOUSES×COLS matrix where:
+         colCounts[h][c] = how many numbers from column c go into house h
+       Row sums = 18 (NUMS_PER_ROW × ROWS), col sums = COL_SIZES.
 
-            const colCount = Array(9).fill(0);
-            row0.forEach(c => colCount[c]++);
-            row1.forEach(c => colCount[c]++);
+       Cols 1-7 divide evenly: 10 / 5 = 2 each.
+       Col 0 has 9 = 4×2 + 1×1  → one house gets 1, rest get 2.
+       Col 8 has 11 = 4×2 + 1×3 → one house gets 3, rest get 2.
+       The same house carries the deficit and surplus so its row sum stays 18.
+    ── */
+    function generateColCounts() {
+        const special = Math.floor(Math.random() * HOUSES);
+        return Array.from({ length: HOUSES }, (_, h) => {
+            const row = Array(COLS).fill(2);
+            if (h === special) { row[0] = 1; row[8] = 3; }
+            return row;
+        });
+    }
 
-            const mustInclude = [];
-            const canInclude = [];
-            for (let c = 0; c < 9; c++) {
-                if (colCount[c] === 0) mustInclude.push(c);
-                else if (colCount[c] === 1) canInclude.push(c);
+    /* ── house grid ───────────────────────────────────────────────────────
+       Given colCounts[c] ∈ {1,2,3} for each column (summing to 18),
+       returns a ROWS×COLS boolean grid where:
+         col c has colCounts[c] true values (= that many numbers)
+         every row has exactly NUMS_PER_ROW (6) true values
+
+       Strategy: think in terms of blank slots.
+         blanks[c] = ROWS - colCounts[c]  ∈ {0,1,2}
+         each row needs exactly (COLS - NUMS_PER_ROW) = 3 blanks
+         total blanks = ROWS×3 = 9 = sum of blanks[c] ✓
+
+       Process columns highest-blanks first (avoids dead-ends).
+    ── */
+    function generateHouseGrid(colCounts) {
+        const blanksNeeded = colCounts.map(n => ROWS - n);
+
+        // sort cols: most blanks first, shuffle within same group
+        const colOrder = shuffle(
+            Array.from({ length: COLS }, (_, i) => i)
+        ).sort((a, b) => blanksNeeded[b] - blanksNeeded[a]);
+
+        const grid     = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+        const rowBlanks = Array(ROWS).fill(0); // blanks so far per row
+
+        for (const c of colOrder) {
+            const nb = blanksNeeded[c];
+            if (nb === 0) {
+                for (let r = 0; r < ROWS; r++) grid[r][c] = true;
+                continue;
             }
-
-            if (mustInclude.length > 5) continue;
-            const needed = 5 - mustInclude.length;
-            if (canInclude.length < needed) continue;
-
-            const row2 = [...mustInclude, ...shuffle(canInclude).slice(0, needed)];
-
-            const grid = Array.from({ length: 3 }, () => Array(9).fill(false));
-            row0.forEach(c => (grid[0][c] = true));
-            row1.forEach(c => (grid[1][c] = true));
-            row2.forEach(c => (grid[2][c] = true));
-            return grid;
+            const avail = Array.from({ length: ROWS }, (_, r) => r)
+                .filter(r => rowBlanks[r] < COLS - NUMS_PER_ROW); // < 3
+            const blankRows = shuffle(avail).slice(0, nb);
+            const blankSet  = new Set(blankRows);
+            blankRows.forEach(r => rowBlanks[r]++);
+            for (let r = 0; r < ROWS; r++) grid[r][c] = !blankSet.has(r);
         }
+        return grid;
     }
 
-    function generateTicket() {
-        const grid = generateGrid();
-        const ticket = Array.from({ length: 3 }, () => Array(9).fill(0));
+    /* ── book ticket ──────────────────────────────────────────────────────
+       Returns array of HOUSES grids, each ROWS×COLS with actual numbers.
+       Numbers 1-90 appear exactly once across all houses.
+    ── */
+    function generateBookTicket() {
+        const colCounts = generateColCounts();
+        const grids     = colCounts.map(cc => generateHouseGrid(cc));
+        const houses    = grids.map(() =>
+            Array.from({ length: ROWS }, () => Array(COLS).fill(0))
+        );
 
-        for (let col = 0; col < 9; col++) {
-            const [min, max] = COLUMN_RANGES[col];
-            const rows = [0, 1, 2].filter(r => grid[r][col]).sort((a, b) => a - b);
-
-            const pool = [];
-            for (let n = min; n <= max; n++) pool.push(n);
-            const chosen = shuffle(pool).slice(0, rows.length).sort((a, b) => a - b);
-
-            rows.forEach((r, i) => (ticket[r][col] = chosen[i]));
+        for (let c = 0; c < COLS; c++) {
+            const [min, max] = COLUMN_RANGES[c];
+            const pool = shuffle(Array.from({ length: max - min + 1 }, (_, i) => min + i));
+            let idx = 0;
+            for (let h = 0; h < HOUSES; h++) {
+                const count    = colCounts[h][c];
+                const hNums    = pool.slice(idx, idx + count).sort((a, b) => a - b);
+                idx += count;
+                const filled   = Array.from({ length: ROWS }, (_, r) => r)
+                    .filter(r => grids[h][r][c]).sort((a, b) => a - b);
+                filled.forEach((r, i) => houses[h][r][c] = hNums[i]);
+            }
         }
-        return ticket;
+        return houses;
     }
 
-    function encodeTicket(ticket) {
-        return btoa(ticket.flat().join(','));
+    /* ── encode / decode ── */
+    function encodeBook(houses) {
+        // 5 × 3 × 9 = 135 bytes, each 0-90
+        const flat  = houses.flatMap(h => h.flat());
+        const bytes = new Uint8Array(flat);
+        let   bin   = '';
+        bytes.forEach(b => (bin += String.fromCharCode(b)));
+        return btoa(bin);
     }
 
-    function decodeTicket(code) {
+    function decodeBook(code) {
         try {
-            const flat = atob(code.trim()).split(',').map(Number);
-            if (flat.length !== 27 || flat.some(n => isNaN(n) || n < 0 || n > 90)) return null;
-            return [flat.slice(0, 9), flat.slice(9, 18), flat.slice(18, 27)];
-        } catch {
-            return null;
-        }
+            const bin  = atob(code.trim());
+            const SIZE = HOUSES * ROWS * COLS; // 135
+            if (bin.length !== SIZE) return null;
+            const flat   = Array.from(bin, c => c.charCodeAt(0));
+            const hSize  = ROWS * COLS;
+            return Array.from({ length: HOUSES }, (_, h) => {
+                const hFlat = flat.slice(h * hSize, (h + 1) * hSize);
+                return Array.from({ length: ROWS }, (_, r) =>
+                    hFlat.slice(r * COLS, (r + 1) * COLS)
+                );
+            });
+        } catch { return null; }
     }
 
-    function getRowNums(ticket, row) {
-        return ticket[row].filter(n => n > 0);
-    }
+    /* ── win checking ── */
+    function houseNums(house) { return house.flat().filter(n => n > 0); }
+    function rowNums(house, r) { return house[r].filter(n => n > 0); }
 
-    function getAllNums(ticket) {
-        return ticket.flat().filter(n => n > 0);
-    }
-
-    function checkWin(ticket, drawn, claimId) {
+    function checkHouseWin(house, drawn, claimId) {
         const ds = new Set(drawn);
-        if (claimId === 'top_row')    return getRowNums(ticket, 0).every(n => ds.has(n));
-        if (claimId === 'middle_row') return getRowNums(ticket, 1).every(n => ds.has(n));
-        if (claimId === 'bottom_row') return getRowNums(ticket, 2).every(n => ds.has(n));
-        if (claimId === 'early_five') return getAllNums(ticket).filter(n => ds.has(n)).length >= 5;
-        if (claimId === 'full_house') return getAllNums(ticket).every(n => ds.has(n));
+        if (claimId === 'top_row')    return rowNums(house,0).every(n => ds.has(n));
+        if (claimId === 'middle_row') return rowNums(house,1).every(n => ds.has(n));
+        if (claimId === 'bottom_row') return rowNums(house,2).every(n => ds.has(n));
+        if (claimId === 'full_house') return houseNums(house).every(n => ds.has(n));
         return false;
     }
 
-    function winStatus(ticket, drawn) {
-        const out = {};
-        for (const ct of CLAIM_TYPES) out[ct.id] = checkWin(ticket, drawn, ct.id);
-        return out;
+    function checkEarlyFive(houses, drawn) {
+        const ds  = new Set(drawn);
+        const all = houses.flatMap(h => houseNums(h));
+        return all.filter(n => ds.has(n)).length >= 5;
     }
 
-    function ticketId(ticket) {
-        return encodeTicket(ticket).slice(0, 8).toUpperCase();
+    function bookWinStatus(houses, drawn) {
+        return {
+            early_five: checkEarlyFive(houses, drawn),
+            houses: houses.map(h => ({
+                top_row:    checkHouseWin(h, drawn, 'top_row'),
+                middle_row: checkHouseWin(h, drawn, 'middle_row'),
+                bottom_row: checkHouseWin(h, drawn, 'bottom_row'),
+                full_house: checkHouseWin(h, drawn, 'full_house'),
+            }))
+        };
     }
 
-    return { COLUMN_RANGES, CLAIM_TYPES, shuffle, generateTicket, encodeTicket, decodeTicket, getRowNums, getAllNums, checkWin, winStatus, ticketId };
+    function bookId(houses) {
+        return encodeBook(houses).slice(0, 8).toUpperCase();
+    }
+
+    const HOUSE_CLAIM_TYPES = [
+        { id:'top_row',    label:'Top Row',    icon:'⬆️', desc:'All 6 numbers in the top row' },
+        { id:'middle_row', label:'Middle Row', icon:'➡️', desc:'All 6 numbers in the middle row' },
+        { id:'bottom_row', label:'Bottom Row', icon:'⬇️', desc:'All 6 numbers in the bottom row' },
+        { id:'full_house', label:'Full House', icon:'🏠', desc:'All 18 numbers in this house' },
+    ];
+    const TICKET_CLAIM_TYPES = [
+        { id:'early_five', label:'Early Five', icon:'✋', desc:'Any 5 numbers from the entire ticket' },
+    ];
+
+    return {
+        COLUMN_RANGES, COL_SIZES, HOUSES, ROWS, COLS, NUMS_PER_ROW,
+        HOUSE_CLAIM_TYPES, TICKET_CLAIM_TYPES,
+        shuffle,
+        generateBookTicket, encodeBook, decodeBook,
+        checkHouseWin, checkEarlyFive, bookWinStatus, bookId,
+        houseNums, rowNums,
+    };
 })();
