@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Ticket – Tambola</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<header class="page-header">
+    <a href="index.html" class="btn btn-ghost btn-sm">← Home</a>
+    <span class="page-title">🎟️ MY TICKETS</span>
+    <div class="header-right">
+        <button id="btnCopyCode"    class="btn btn-ghost btn-sm">📋 Copy Code</button>
+        <button id="btnShareTicket" class="btn btn-ghost btn-sm">🔗 Share</button>
+        <button id="btnPrint"       class="btn btn-ghost btn-sm">🖨️ Print</button>
+    </div>
+</header>
+
+<!-- ===== Player layout ===== -->
+<div class="player-layout">
+
+    <!-- Tabs + ticket management -->
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <div class="tab-bar" id="tabBar" role="tablist" aria-label="Tickets"></div>
+    </div>
+
+    <div class="ticket-actions">
+        <button id="btnNewTicket"    class="btn btn-gold btn-sm">＋ New Ticket</button>
+        <button id="btnRemoveTicket" class="btn btn-ghost btn-sm">🗑 Remove</button>
+        <button id="btnResetMarks"   class="btn btn-ghost btn-sm">↺ Clear Marks</button>
+    </div>
+
+    <!-- Ticket render area -->
+    <div id="ticketContainer"></div>
+
+    <!-- Win badges -->
+    <div class="sidebar-card" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+        <div class="sidebar-title" style="color:var(--gold);font-size:.78rem;letter-spacing:.08em;font-weight:700;margin-bottom:.75rem">WIN STATUS — tap a glowing badge to claim</div>
+        <div class="win-panel" id="winPanel"></div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="sidebar-card" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+        <div class="sidebar-title" style="color:var(--gold);font-size:.78rem;letter-spacing:.08em;font-weight:700;margin-bottom:.6rem">HOW TO PLAY</div>
+        <ul style="font-size:.82rem;color:var(--muted);line-height:1.8;padding-left:1.1rem">
+            <li>Tap a number on your ticket to <strong style="color:#fff">mark it</strong> when the host calls it out</li>
+            <li>Win badges light up <span style="color:var(--gold)">✨ gold</span> when a prize condition is met</li>
+            <li>Tap a glowing badge to show your <strong style="color:#fff">claim card</strong> to the host</li>
+            <li>Use <strong style="color:#fff">Copy Code</strong> and share it with the host to verify your win digitally</li>
+            <li>Your ticket and marks are <strong style="color:#fff">auto-saved</strong> — safe to close and reopen</li>
+        </ul>
+    </div>
+
+</div><!-- /player-layout -->
+
+<!-- ===== Claim Modal ===== -->
+<div id="claimModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="claimTitle">
+    <div class="modal-box">
+        <div class="modal-title" id="claimTitle">🏆 Claim Your Win!</div>
+
+        <p style="font-size:.88rem;color:var(--muted);margin-bottom:.5rem">Prize type</p>
+        <p id="claimWinType" style="font-size:1.1rem;font-weight:800;color:var(--gold);margin-bottom:1rem"></p>
+
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:.3rem">Ticket ID: <strong id="claimTicketId" style="color:var(--white)"></strong></p>
+
+        <div id="claimTicketMini" class="claim-preview"></div>
+
+        <div class="code-label" style="margin-top:.85rem">Your ticket code — share with host to verify</div>
+        <div class="claim-code-box" id="claimTicketCode"></div>
+
+        <div class="modal-actions">
+            <button id="btnCopyClaimCode" class="btn btn-gold">📋 Copy Code</button>
+            <button id="btnCloseClaim" class="btn btn-ghost">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/game.js"></script>
+<script src="assets/js/player.js"></script>
+<script>
+    /* Wire up copy-code inside claim modal after scripts load */
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('btnCopyClaimCode').addEventListener('click', () => {
+            const code = document.getElementById('claimTicketCode').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                    const t = document.getElementById('toast');
+                    t.textContent = 'Ticket code copied!';
+                    t.className = 'toast show success';
+                    clearTimeout(t._timer);
+                    t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+                });
+            } else {
+                prompt('Copy your ticket code:', code);
+            }
+        });
+    });
+</script>
+</body>
+</html>

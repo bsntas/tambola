@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host Mode – Tambola</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<header class="page-header">
+    <a href="index.html" class="btn btn-ghost btn-sm">← Home</a>
+    <span class="page-title">🎯 HOST MODE</span>
+    <div class="header-right">
+        <div class="stats-chips">
+            <span class="stat-chip">Drawn: <strong id="drawnCount">0</strong></span>
+            <span class="stat-chip">Left: <strong id="remainingCount">90</strong></span>
+        </div>
+        <button id="btnVerify" class="btn btn-outline btn-sm">✅ Verify Claim</button>
+        <button id="btnReset"  class="btn btn-ghost btn-sm">↺ New Game</button>
+    </div>
+</header>
+
+<!-- ===== Main Layout ===== -->
+<div class="host-layout">
+
+    <!-- LEFT / MAIN COLUMN -->
+    <div class="host-main">
+
+        <!-- Current draw panel -->
+        <div class="draw-panel">
+            <div class="current-number-wrap">
+                <div id="currentNumber" class="current-number hidden" aria-live="polite" aria-atomic="true">—</div>
+                <div id="emptyDraw" class="empty-draw">Press<br>Draw</div>
+            </div>
+
+            <div class="draw-controls">
+                <button id="btnDraw" class="btn btn-gold btn-xl">🎲 Draw Number</button>
+
+                <div class="auto-row">
+                    <span style="font-size:.82rem;color:var(--muted)">Auto-draw:</span>
+                    <select id="autoSpeedSelect" class="speed-select" aria-label="Auto-draw interval">
+                        <option value="5000">Every 5 s</option>
+                        <option value="8000" selected>Every 8 s</option>
+                        <option value="10000">Every 10 s</option>
+                        <option value="15000">Every 15 s</option>
+                        <option value="20000">Every 20 s</option>
+                        <option value="30000">Every 30 s</option>
+                    </select>
+                    <button id="btnAutoStart" class="btn btn-orange btn-sm">▶ Start</button>
+                    <button id="btnAutoStop"  class="btn btn-red btn-sm hidden">⏹ Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawn numbers strip -->
+        <div class="drawn-strip-wrap">
+            <div class="drawn-strip-label">RECENTLY DRAWN (newest first)</div>
+            <div class="drawn-strip" id="drawnStrip" aria-live="polite" aria-label="Recently drawn numbers"></div>
+        </div>
+
+        <!-- Number board 1–90 -->
+        <div class="board-wrap">
+            <div class="board-title">BOARD — 1 to 90</div>
+            <div class="number-board" id="numberBoard" role="grid" aria-label="Numbers 1 to 90"></div>
+        </div>
+
+    </div><!-- /host-main -->
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="sidebar-card">
+            <div class="sidebar-title">📋 TIPS</div>
+            <ul style="font-size:.8rem;color:var(--muted);line-height:1.8;padding-left:1.1rem">
+                <li>Press <strong style="color:var(--gold)">Draw Number</strong> to pick next</li>
+                <li><strong style="color:var(--gold)">Auto-draw</strong> calls numbers hands-free</li>
+                <li>Voice announcement uses your device's text-to-speech</li>
+                <li>Board lights up drawn numbers in gold</li>
+                <li>State is auto-saved across refreshes</li>
+                <li>Hit <strong style="color:var(--gold)">Verify Claim</strong> to confirm a win</li>
+            </ul>
+        </div>
+
+        <div class="sidebar-card">
+            <div class="sidebar-title">🏆 TYPICAL PRIZE ORDER</div>
+            <ol style="font-size:.82rem;color:var(--muted);line-height:2;padding-left:1.1rem">
+                <li>✋ Early Five</li>
+                <li>⬆️ Top Row</li>
+                <li>➡️ Middle Row</li>
+                <li>⬇️ Bottom Row</li>
+                <li>🏠 Full House</li>
+            </ol>
+        </div>
+
+        <div class="sidebar-card">
+            <div class="sidebar-title">🔍 HOW TO VERIFY</div>
+            <p style="font-size:.8rem;color:var(--muted);line-height:1.7">
+                Ask the player to share their <strong style="color:#fff">ticket code</strong>
+                from the Player page (Copy Code button).<br><br>
+                Paste it in the <strong style="color:var(--gold)">Verify Claim</strong> panel,
+                select the prize type, and click Verify.
+            </p>
+        </div>
+
+    </aside>
+
+</div><!-- /host-layout -->
+
+<!-- ===== Verify Claim Modal ===== -->
+<div id="verifyModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="verifyTitle">
+    <div class="modal-box">
+        <div class="modal-title" id="verifyTitle">✅ Verify Winning Claim</div>
+
+        <label style="font-size:.82rem;color:var(--muted);display:block;margin-bottom:.3rem">Prize type being claimed</label>
+        <select id="claimTypeSelect" class="claim-select" aria-label="Prize type"></select>
+
+        <label style="font-size:.82rem;color:var(--muted);display:block;margin:.9rem 0 .3rem">Player's ticket code</label>
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem">
+            Ask the player to tap <em>Copy Code</em> on their ticket and share it with you.
+        </p>
+        <div class="decode-row">
+            <textarea id="ticketCodeInput" class="ticket-input" rows="3"
+                placeholder="Paste ticket code here…" aria-label="Ticket code"></textarea>
+            <button id="btnDecodeTicket" class="btn btn-ghost" style="align-self:flex-start">Load</button>
+        </div>
+
+        <!-- Ticket preview renders here -->
+        <div id="ticketPreview" class="claim-preview"></div>
+
+        <!-- Verification result -->
+        <div id="verifyResult" class="verify-result"></div>
+
+        <div class="modal-actions">
+            <button id="btnRunVerify"   class="btn btn-gold">✅ Verify Now</button>
+            <button id="btnCloseVerify" class="btn btn-ghost">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/game.js"></script>
+<script src="assets/js/host.js"></script>
+</body>
+</html>
