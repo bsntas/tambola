@@ -95,12 +95,10 @@ const HostMode = (() => {
         let text, lang;
         if (call) {
             if (voiceLang === 'hi') {
-                const phrase = call.hi.replace(emojiRE, '').trim();
-                text = `${num}. ${phrase}`;
+                text = call.hi.replace(emojiRE, '').trim();
                 lang = 'hi-IN';
             } else if (voiceLang === 'ne') {
-                const phrase = call.ne.replace(emojiRE, '').trim();
-                text = `${num}. ${phrase}`;
+                text = call.ne.replace(emojiRE, '').trim();
                 lang = 'ne-NP';
             } else {
                 const phrase = call.en.replace(emojiRE, '').trim();

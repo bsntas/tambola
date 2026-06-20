@@ -288,26 +288,27 @@ button { cursor: pointer; font-family: inherit; }
     position: absolute; left: 0; top: .15em;
     width: 1.2rem; height: 1.2rem;
     border-radius: 3px;
-    background-size: contain; background-repeat: no-repeat;
-    font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .6rem; font-weight: 800; letter-spacing: 0;
+    line-height: 1.2rem; text-align: center;
 }
 .call-line.en {
     color: #ffe680;
     font-weight: 600;
 }
-.call-line.en::before { content: '🇬🇧'; }
+.call-line.en::before { content: 'EN'; background: #ffe680; color: #1a1a1a; }
 .call-line.hi {
     color: #ffb347;
     font-weight: 500;
     font-size: clamp(.8rem, 2vw, .95rem);
 }
-.call-line.hi::before { content: '🇮🇳'; }
+.call-line.hi::before { content: 'हि'; background: #ffb347; color: #1a1a1a; font-size: .7rem; }
 .call-line.ne {
     color: #7ec8ff;
     font-weight: 500;
     font-size: clamp(.8rem, 2vw, .95rem);
 }
-.call-line.ne::before { content: '🇳🇵'; }
+.call-line.ne::before { content: 'ने'; background: #7ec8ff; color: #1a1a1a; font-size: .7rem; }
 
 /* Current draw panel */
 .draw-panel {

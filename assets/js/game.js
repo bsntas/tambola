@@ -146,9 +146,8 @@ const TambolaGame = (() => {
     }
 
     function checkEarlyFive(houses, drawn) {
-        const ds  = new Set(drawn);
-        const all = houses.flatMap(h => houseNums(h));
-        return all.filter(n => ds.has(n)).length >= 5;
+        const ds = new Set(drawn);
+        return houses.some(h => houseNums(h).filter(n => ds.has(n)).length >= 5);
     }
 
     function bookWinStatus(houses, drawn) {
@@ -174,7 +173,7 @@ const TambolaGame = (() => {
         { id:'full_house', label:'Full House', icon:'🏠', desc:'All 18 numbers in this house' },
     ];
     const TICKET_CLAIM_TYPES = [
-        { id:'early_five', label:'Early Five', icon:'✋', desc:'Any 5 numbers from the entire ticket' },
+        { id:'early_five', label:'Early Five', icon:'✋', desc:'First 5 numbers marked in any single house' },
     ];
 
     return {
