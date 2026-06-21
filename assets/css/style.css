@@ -479,6 +479,7 @@ button { cursor: pointer; font-family: inherit; }
 
 .decode-row { display: flex; gap: .5rem; }
 .decode-row .ticket-input { flex: 1; min-height: auto; }
+.decode-load-btn { align-self: flex-start; }
 
 /* ===== Player Page ===== */
 .player-layout {
@@ -607,6 +608,83 @@ button { cursor: pointer; font-family: inherit; }
 .claim-house-label {
     font-size: .72rem; color: var(--muted); letter-spacing: .05em;
     text-transform: uppercase; margin-bottom: .3rem;
+}
+
+/* ===== Host Mode — Mobile responsive (≤ 600px) ===== */
+@media (max-width: 600px) {
+
+    /* Header: 2-row layout — home+title on row 1, actions on row 2 */
+    .page-header { padding: .45rem .75rem; gap: .3rem; }
+    .page-title  { font-size: .88rem; }
+    .header-right {
+        width: 100%; margin-left: 0;
+        justify-content: space-between; gap: .35rem;
+    }
+    .stats-chips { flex: 1; gap: .35rem; }
+    .stat-chip   { font-size: .75rem; padding: .2rem .65rem; }
+
+    /* Host layout padding */
+    .host-layout { padding: .45rem; gap: .55rem; }
+
+    /* Draw panel — stack number + controls vertically, centred */
+    .draw-panel {
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem .85rem;
+        gap: .9rem;
+    }
+    .current-number-wrap { width: 6.5rem; height: 6.5rem; }
+    .current-number      { width: 6.5rem; height: 6.5rem; font-size: 2.6rem; }
+    .empty-draw          { width: 6.5rem; height: 6.5rem; font-size: .85rem; }
+    .draw-controls       { width: 100%; min-width: 0; }
+    #btnDraw             { width: 100%; justify-content: center; }
+    .auto-row            { gap: .45rem; }
+    .auto-row .speed-select { flex: 1; min-width: 0; }
+
+    /* Number board — tighter grid */
+    .board-wrap   { padding: .6rem .4rem; }
+    .number-board { gap: .15rem; }
+    .board-cell   { border-radius: 4px; }
+
+    /* Drawn strip */
+    .drawn-strip-wrap { padding: .55rem .75rem; }
+
+    /* Call card */
+    .call-card { padding: .8rem .9rem; }
+
+    /* Winners panel */
+    .winner-ticket-id { display: none; }
+    .winner-entry { gap: .45rem; padding: .45rem .6rem; }
+    .winner-meta  { font-size: .7rem; }
+
+    /* Verify modal — bottom-sheet style */
+    .modal { padding: .25rem; align-items: flex-end; }
+    .modal-box {
+        max-height: 93vh;
+        padding: 1.1rem .9rem;
+        border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .modal-title { font-size: 1.05rem; margin-bottom: .85rem; }
+    .modal-actions { flex-direction: column; }
+    .modal-actions .btn { text-align: center; justify-content: center; }
+
+    /* Ticket code input area — stack vertically */
+    .decode-row { flex-direction: column; gap: .45rem; }
+    .decode-row .btn { align-self: stretch; text-align: center; justify-content: center; }
+
+    /* Save-winner row — stacked on mobile */
+    .save-winner-row { flex-wrap: wrap; gap: .45rem; }
+    .winner-name-input { flex-basis: 100%; }
+    .save-winner-row .btn { flex: 1; justify-content: center; }
+
+    /* Sidebar cards — reduce padding to save vertical space */
+    .sidebar-card { padding: .75rem; }
+    .sidebar-title { margin-bottom: .55rem; }
+}
+
+/* Very small phones (≤ 380px) — hide secondary sidebar to reduce scrolling */
+@media (max-width: 380px) {
+    .sidebar { display: none; }
 }
 
 /* ===== Print styles ===== */
