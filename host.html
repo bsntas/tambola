@@ -76,6 +76,12 @@
             <div class="drawn-strip" id="drawnStrip" aria-live="polite" aria-label="Recently drawn numbers"></div>
         </div>
 
+        <!-- Confirmed winners panel (hidden until first winner recorded) -->
+        <div id="winnersSection" class="winners-section hidden">
+            <div class="drawn-strip-label">🏆 CONFIRMED WINNERS</div>
+            <div id="winnersList" class="winners-list"></div>
+        </div>
+
         <!-- Number board 1–90 -->
         <div class="board-wrap">
             <div class="board-title">BOARD — 1 to 90</div>
@@ -152,6 +158,13 @@
 
         <!-- Verification result -->
         <div id="verifyResult" class="verify-result"></div>
+
+        <!-- Save winner — shown when claim is valid -->
+        <div id="saveWinnerRow" class="save-winner-row hidden">
+            <input id="winnerNameInput" class="winner-name-input"
+                   type="text" placeholder="Enter player's name…" maxlength="50" autocomplete="off">
+            <button id="btnSaveWinner" class="btn btn-gold btn-sm">🏆 Record Win</button>
+        </div>
 
         <div class="modal-actions">
             <button id="btnRunVerify"   class="btn btn-gold">✅ Verify Now</button>

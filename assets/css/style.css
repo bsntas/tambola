@@ -130,7 +130,7 @@ button { cursor: pointer; font-family: inherit; }
 .ticket-mini .ticket-row { display: grid; grid-template-columns: repeat(9,1fr); }
 .ticket-mini .tcell {
     aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-    font-size: clamp(.6rem,1.8vw,.8rem); font-weight: 600;
+    font-size: clamp(.82rem, 2.2vw, 1.05rem); font-weight: 700;
     border: 1px solid #ddd;
 }
 .ticket-mini .tcell.blank { background: #f0f0f0; }
@@ -431,6 +431,51 @@ button { cursor: pointer; font-family: inherit; }
 .verify-fail { background: rgba(231,76,60,.15); border: 1px solid var(--red);   color: #ff9f9f; }
 .verify-win span, .verify-fail span { font-weight: 800; }
 .error-text { color: var(--red); font-size: .85rem; margin-top: .5rem; }
+
+/* Save winner row inside verify modal */
+.save-winner-row {
+    display: flex; align-items: center; gap: .5rem;
+    margin-top: .65rem; padding: .6rem .75rem;
+    background: rgba(255,215,0,.08); border: 1px solid rgba(255,215,0,.3);
+    border-radius: var(--radius-sm);
+}
+.winner-name-input {
+    flex: 1; min-width: 0;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: .45rem .7rem;
+    color: var(--white); font-size: .88rem;
+    outline: none;
+}
+.winner-name-input:focus { border-color: var(--gold); }
+
+/* Winners panel in main game view */
+.winners-section {
+    background: var(--card); border: 1px solid rgba(255,215,0,.35);
+    border-radius: var(--radius); padding: .85rem 1rem;
+    margin-bottom: .5rem;
+}
+.winners-list { display: flex; flex-direction: column; gap: .45rem; margin-top: .5rem; }
+.winner-entry {
+    display: flex; align-items: center; gap: .65rem;
+    background: rgba(255,215,0,.06); border: 1px solid rgba(255,215,0,.18);
+    border-radius: var(--radius-sm); padding: .5rem .75rem;
+    font-size: .85rem;
+}
+.winner-prize-icon { font-size: 1.2rem; flex-shrink: 0; }
+.winner-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.winner-name { font-weight: 700; color: var(--white); }
+.winner-meta { font-size: .75rem; color: var(--muted); }
+.winner-ticket-id {
+    font-family: monospace; font-size: .72rem; color: var(--gold2);
+    flex-shrink: 0;
+}
+.winner-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 1.1rem; line-height: 1;
+    padding: 0 .2rem; flex-shrink: 0;
+    transition: color .15s;
+}
+.winner-remove:hover { color: var(--red); }
 
 .decode-row { display: flex; gap: .5rem; }
 .decode-row .ticket-input { flex: 1; min-height: auto; }

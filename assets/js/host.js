@@ -5,6 +5,7 @@ const HostMode = (() => {
 
     let drawn = [];
     let remaining = [];
+    let winners = [];
     let autoTimer = null;
     let autoSpeed = 8000;
     let voiceLang = 'en';
@@ -16,7 +17,7 @@ const HostMode = (() => {
 
     function save() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ drawn, autoSpeed, voiceLang }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ drawn, autoSpeed, voiceLang, winners }));
         } catch {}
     }
 
@@ -26,6 +27,7 @@ const HostMode = (() => {
             drawn = d.drawn || [];
             autoSpeed = d.autoSpeed || 8000;
             voiceLang = d.voiceLang || 'en';
+            winners = d.winners || [];
         } catch {}
         const drawnSet = new Set(drawn);
         remaining = TambolaGame.shuffle(
@@ -55,9 +57,10 @@ const HostMode = (() => {
     }
 
     function resetGame() {
-        if (!confirm('Reset the game? All drawn numbers will be cleared.')) return;
+        if (!confirm('Reset the game? All drawn numbers and winner records will be cleared.')) return;
         stopAuto();
         drawn = [];
+        winners = [];
         remaining = TambolaGame.shuffle(Array.from({ length: 90 }, (_, i) => i + 1));
         lastDrawn = null;
         save();
@@ -65,6 +68,7 @@ const HostMode = (() => {
         renderDrawnStrip();
         updateCurrentDisplay(null);
         updateStats();
+        renderWinners();
         showToast('Game reset!', 'info');
     }
 
@@ -196,6 +200,8 @@ const HostMode = (() => {
         document.getElementById('ticketPreview').innerHTML = '';
         document.getElementById('houseSelectRow').classList.add('hidden');
         document.getElementById('claimTypeSelect').innerHTML = '';
+        document.getElementById('saveWinnerRow').classList.add('hidden');
+        document.getElementById('winnerNameInput').value = '';
         document.getElementById('verifyModal').classList.remove('hidden');
     }
 
@@ -291,10 +297,79 @@ const HostMode = (() => {
 
         if (won) {
             resEl.innerHTML = `<div class="verify-win">✅ VALID CLAIM! <span>${claimLabel}</span> is complete.</div>`;
+            document.getElementById('saveWinnerRow').classList.remove('hidden');
+            document.getElementById('winnerNameInput').focus();
         } else {
             resEl.innerHTML = `<div class="verify-fail">❌ NOT YET. <span>${claimLabel}</span> is not complete with drawn numbers.</div>`;
+            document.getElementById('saveWinnerRow').classList.add('hidden');
         }
         renderVerifyPreview(verifyTicket);
+    }
+
+    /* ---------- winners ---------- */
+
+    function saveWinner() {
+        if (!verifyTicket) return;
+        const name = document.getElementById('winnerNameInput').value.trim() || 'Anonymous';
+        const hSel    = document.getElementById('houseSelect');
+        const claimId = document.getElementById('claimTypeSelect').value;
+        const isAll   = hSel.value === 'all';
+
+        let prizeLabel, prizeIcon, scope;
+        if (isAll) {
+            const ct = TambolaGame.TICKET_CLAIM_TYPES.find(c => c.id === claimId);
+            prizeLabel = ct?.label ?? claimId;
+            prizeIcon  = ct?.icon  ?? '🏆';
+            scope      = 'Whole Ticket';
+        } else {
+            const hIdx = Number(hSel.value);
+            const ct   = TambolaGame.HOUSE_CLAIM_TYPES.find(c => c.id === claimId);
+            prizeLabel = ct?.label ?? claimId;
+            prizeIcon  = ct?.icon  ?? '🏆';
+            scope      = `House ${hIdx + 1}`;
+        }
+
+        const ticketId = TambolaGame.bookId(verifyTicket);
+        winners.push({ name, prizeLabel, prizeIcon, scope, ticketId, drawnAt: drawn.length });
+        save();
+        renderWinners();
+
+        document.getElementById('saveWinnerRow').classList.add('hidden');
+        document.getElementById('winnerNameInput').value = '';
+        showToast(`${prizeIcon} ${name} recorded as winner!`, 'info');
+    }
+
+    function renderWinners() {
+        const section = document.getElementById('winnersSection');
+        const list    = document.getElementById('winnersList');
+        if (!section) return;
+        if (winners.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+        section.classList.remove('hidden');
+        list.innerHTML = winners.map((w, i) => `
+            <div class="winner-entry">
+                <span class="winner-prize-icon">${w.prizeIcon}</span>
+                <div class="winner-info">
+                    <span class="winner-name">${esc(w.name)}</span>
+                    <span class="winner-meta">${esc(w.prizeLabel)} &middot; ${esc(w.scope)} &middot; after ${w.drawnAt} numbers</span>
+                </div>
+                <span class="winner-ticket-id">#${esc(w.ticketId)}</span>
+                <button class="winner-remove" data-idx="${i}" aria-label="Remove winner">×</button>
+            </div>
+        `).join('');
+        list.querySelectorAll('.winner-remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+                winners.splice(Number(btn.dataset.idx), 1);
+                save();
+                renderWinners();
+            });
+        });
+    }
+
+    function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     /* ---------- toast ---------- */
@@ -351,6 +426,13 @@ const HostMode = (() => {
         });
 
         document.getElementById('houseSelect').addEventListener('change', updateClaimTypeSelect);
+
+        document.getElementById('btnSaveWinner').addEventListener('click', saveWinner);
+        document.getElementById('winnerNameInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') saveWinner();
+        });
+
+        renderWinners();
     }
 
     return { init };
